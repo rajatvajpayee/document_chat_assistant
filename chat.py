@@ -2,8 +2,14 @@ from vector_store import VectorStore
 from prompt import build_prompt
 from llm import generate
 
+from retriever import Retriever
+from reranker import rerank
+from memory import ConversationalMemory
+
 store = VectorStore()
 store.load()
+
+history = ConversationalMemory()
 
 while True:
 
@@ -12,26 +18,23 @@ while True:
     if query.lower() == "exit":
         break
 
-    scores, indices = store.search(query)
+    rtrvr = Retriever(store)
+    retrieved_nodes = rtrvr.retrieve(query, top_k=10)
+    retrieved_nodes= rerank(query, retrieved_nodes)
+    top_n = 5 # lets select top 5 documents now.
+
+    mem = history.get_history()
 
     context = ""
 
-    print("\nRetrieved:\n")
+    for node in retrieved_nodes:
+        context += node['text'] + "\n\n"
 
-    for score, idx in zip(scores, indices):
-
-        node = store.nodes[idx]
-
-        print(
-            f"Score: {score:.3f} "
-            f"(Page {node.metadata.get('page_label', '?')})"
-        )
-
-        context += node.text + "\n\n"
-
-    prompt = build_prompt(context, query)
+    prompt = build_prompt(mem, context, query)
 
     answer = generate(prompt)
-
-    print("\nAnswer\n")
+    print("\nAnswer:")
     print(answer)
+
+    history.add_user(query)
+    history.add_assistant(answer)

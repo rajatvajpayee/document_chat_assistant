@@ -6,9 +6,13 @@ If the answer is not contained in the context, say:
 Be concise and accurate.
 """
 
-def build_prompt(context, question):
+def build_prompt(history, context, question):
     return f"""
     {SYSTEM_PROMPT}
+
+    Conversation History:
+    ---------------------
+    {history}
 
     Context:
     ---------------------
